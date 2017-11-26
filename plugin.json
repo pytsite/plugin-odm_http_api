@@ -1,0 +1,24 @@
+{
+  "name": "odm_http_api",
+  "version": "1.0",
+  "description": {
+    "en": "ODM HTTP API",
+    "ru": "ODM HTTP API",
+    "uk": "ODM HTTP API"
+  },
+  "url": "https://github.com/pytsite/plugin-odm_http_api",
+  "author": {
+    "name": "Alexander Shepetko",
+    "email": "a@shepetko.com",
+    "url": "https://shepetko.com"
+  },
+  "requires": {
+    "packages": [],
+    "plugins": [
+      "assetman",
+      "http_api",
+      "odm",
+      "odm_auth"
+    ]
+  }
+}
