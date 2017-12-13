@@ -6,7 +6,7 @@ __email__ = 'a@shepetko.com'
 __license__ = 'MIT'
 
 
-def _init():
+def plugin_load():
     from plugins import http_api, assetman
     from . import _controllers
 
@@ -18,8 +18,5 @@ def _init():
 
     # JavaScript API
     assetman.register_package(__name__)
-    assetman.t_js(__name__ + '@**')
+    assetman.t_js(__name__)
     assetman.js_module('odm-http-api', __name__ + '@odm-http-api')
-
-
-_init()

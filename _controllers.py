@@ -10,8 +10,8 @@ __email__ = 'a@shepetko.com'
 __license__ = 'MIT'
 
 
-def _fill_entity_fields(entity: _odm_auth.model.AuthorizableEntity,
-                        fields_data: _Mapping) -> _odm_auth.model.AuthorizableEntity:
+def _fill_entity_fields(entity: _odm_auth.model.OwnedEntity,
+                        fields_data: _Mapping) -> _odm_auth.model.OwnedEntity:
     for field_name, field_value in fields_data.items():
         # Fields to skip
         if field_name.startswith('_') or not entity.has_field(field_name):
@@ -74,7 +74,7 @@ class GetEntities(_routing.Controller):
         # Check entity's class
         try:
             mock = _odm.dispense(model)
-            if not isinstance(mock, _odm_auth.model.AuthorizableEntity):
+            if not isinstance(mock, _odm_auth.model.OwnedEntity):
                 raise self.forbidden("Model '{}' does not support transfer via HTTP".format(model))
         except _odm.error.ModelNotRegistered as e:
             raise self.not_found(e)
@@ -106,7 +106,7 @@ class GetEntity(_routing.Controller):
 
         # Search for entity
         try:
-            entity = _odm.find(model).eq('_id', self.arg('uid')).first()  # type: _odm_auth.model.AuthorizableEntity
+            entity = _odm.find(model).eq('_id', self.arg('uid')).first()  # type: _odm_auth.model.OwnedEntity
         except _odm.error.ModelNotRegistered as e:
             raise self.not_found(e)
 
@@ -114,7 +114,7 @@ class GetEntity(_routing.Controller):
             raise self.not_found('Entity not found')
 
         # Check for entity's class
-        if not isinstance(entity, _odm_auth.model.AuthorizableEntity):
+        if not isinstance(entity, _odm_auth.model.OwnedEntity):
             raise self.forbidden("Model '{}' does not support transfer via HTTP".format(model))
 
         # Check for permissions
@@ -144,12 +144,12 @@ class PostEntity(_routing.Controller):
 
         # Dispense new entity
         try:
-            entity = _odm.dispense(model)  # type: _odm_auth.model.AuthorizableEntity
+            entity = _odm.dispense(model)  # type: _odm_auth.model.OwnedEntity
         except _odm.error.ModelNotRegistered as e:
             raise self.not_found(e)
 
         # Only authorizable entities can be accessed via HTTP API
-        if not isinstance(entity, _odm_auth.model.AuthorizableEntity):
+        if not isinstance(entity, _odm_auth.model.OwnedEntity):
             raise self.forbidden("Model '{}' does not support transfer via HTTP".format(model))
 
         # Which fields to return
@@ -174,12 +174,12 @@ class PatchEntity(_routing.Controller):
 
         # Dispense existing entity
         try:
-            entity = _odm.dispense(model, self.args.pop('uid'))  # type: _odm_auth.model.AuthorizableEntity
+            entity = _odm.dispense(model, self.args.pop('uid'))  # type: _odm_auth.model.OwnedEntity
         except _odm.error.ModelNotRegistered as e:
             raise self.not_found(e)
 
         # Only authorizable entities can be accessed via HTTP API
-        if not isinstance(entity, _odm_auth.model.AuthorizableEntity):
+        if not isinstance(entity, _odm_auth.model.OwnedEntity):
             raise self.forbidden("Model '{}' does not support transfer via HTTP".format(model))
 
         # Check permissions
@@ -213,7 +213,7 @@ class DeleteEntity(_routing.Controller):
             raise self.not_found(e)
 
         # Only authorizable entities can be accessed via HTTP API
-        if not isinstance(entity, _odm_auth.model.AuthorizableEntity):
+        if not isinstance(entity, _odm_auth.model.OwnedEntity):
             raise self.forbidden("Model '{}' does not support transfer via HTTP".format(model))
 
         # Check permissions
