@@ -7,7 +7,17 @@ __license__ = 'MIT'
 
 
 def plugin_load():
-    from plugins import http_api, assetman
+    from plugins import assetman
+    from . import _controllers
+
+    # JavaScript API
+    assetman.register_package(__name__)
+    assetman.t_js(__name__)
+    assetman.js_module('odm-http-api', __name__ + '@odm-http-api')
+
+
+def plugin_load_uwsgi():
+    from plugins import http_api
     from . import _controllers
 
     http_api.handle('GET', 'odm/entities/<model>', _controllers.GetEntities, 'odm_http_api@get_entities')
@@ -16,7 +26,9 @@ def plugin_load():
     http_api.handle('PATCH', 'odm/entity/<model>/<uid>', _controllers.PatchEntity, 'odm_http_api@patch_entity')
     http_api.handle('DELETE', 'odm/entity/<model>/<uid>', _controllers.DeleteEntity, 'odm_http_api@delete_entity')
 
-    # JavaScript API
-    assetman.register_package(__name__)
-    assetman.t_js(__name__)
-    assetman.js_module('odm-http-api', __name__ + '@odm-http-api')
+
+def plugin_install():
+    from plugins import assetman
+
+    plugin_load()
+    assetman.build(__name__)
