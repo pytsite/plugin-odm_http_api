@@ -6,14 +6,23 @@ __email__ = 'a@shepetko.com'
 __license__ = 'MIT'
 
 
-def plugin_load():
+def _register_assetman_resources():
     from plugins import assetman
-    from . import _controllers
 
-    # JavaScript API
-    assetman.register_package(__name__)
-    assetman.t_js(__name__)
-    assetman.js_module('odm-http-api', __name__ + '@odm-http-api')
+    if not assetman.is_package_registered(__name__):
+        assetman.register_package(__name__)
+        assetman.t_js(__name__)
+        assetman.js_module('odm-http-api', __name__ + '@odm-http-api')
+
+    return assetman
+
+
+def plugin_install():
+    _register_assetman_resources().build(__name__)
+
+
+def plugin_load():
+    _register_assetman_resources()
 
 
 def plugin_load_uwsgi():
@@ -25,10 +34,3 @@ def plugin_load_uwsgi():
     http_api.handle('GET', 'odm/entity/<model>/<uid>', _controllers.GetEntity, 'odm_http_api@get_entity')
     http_api.handle('PATCH', 'odm/entity/<model>/<uid>', _controllers.PatchEntity, 'odm_http_api@patch_entity')
     http_api.handle('DELETE', 'odm/entity/<model>/<uid>', _controllers.DeleteEntity, 'odm_http_api@delete_entity')
-
-
-def plugin_install():
-    from plugins import assetman
-
-    plugin_load()
-    assetman.build(__name__)
