@@ -3,6 +3,12 @@
 
 ## Changelog
 
+
+### 1.3 (2018-03-15)
+
+Support for PytSite-7.13.
+
+
 ### 1.2.2 (2017-12-21)
 
 Init code refactored.

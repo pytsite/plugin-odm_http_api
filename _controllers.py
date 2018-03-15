@@ -66,7 +66,7 @@ class GetEntities(_routing.Controller):
         super().__init__()
 
         self.args.add_formatter('skip', _formatters.PositiveInt())
-        self.args.add_formatter('limit', _formatters.Int(0, 100))
+        self.args.add_formatter('limit', _formatters.PositiveInt(maximum=100))
 
     def exec(self) -> _List[dict]:
         model = self.args.pop('model')
