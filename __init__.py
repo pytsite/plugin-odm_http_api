@@ -1,28 +1,22 @@
 """PytSite ODM HTTP API
 """
-
 __author__ = 'Alexander Shepetko'
 __email__ = 'a@shepetko.com'
 __license__ = 'MIT'
 
 
-def _register_assetman_resources():
+def plugin_load():
     from plugins import assetman
 
-    if not assetman.is_package_registered(__name__):
-        assetman.register_package(__name__)
-        assetman.t_js(__name__)
-        assetman.js_module('odm-http-api', __name__ + '@odm-http-api')
-
-    return assetman
+    assetman.register_package(__name__)
+    assetman.t_js(__name__)
+    assetman.js_module('odm-http-api', __name__ + '@odm-http-api')
 
 
 def plugin_install():
-    _register_assetman_resources().build(__name__)
+    from plugins import assetman
 
-
-def plugin_load():
-    _register_assetman_resources()
+    assetman.build(__name__)
 
 
 def plugin_load_uwsgi():

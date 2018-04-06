@@ -17,7 +17,7 @@
     "plugins": [
       "assetman",
       "http_api",
-      "odm",
+      "odm>=2.0",
       "odm_auth"
     ]
   }

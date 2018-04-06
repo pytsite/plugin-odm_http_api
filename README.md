@@ -4,6 +4,11 @@
 ## Changelog
 
 
+### 2.0 (2018-04-06)
+
+Support of `odm-2.0`.
+
+
 ### 1.3 (2018-03-15)
 
 Support for PytSite-7.13.

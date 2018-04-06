@@ -49,11 +49,21 @@ def _parse_query(query: str, finder: _odm.Finder) -> _odm.Finder:
         return finder
 
     for query_part in query.split(';'):
-        try:
-            f_name, op, arg = query_part.split('~')
-            finder.where(f_name, op, arg)
-        except ValueError:
-            raise ValueError('Invalid query: {}'.format(query))
+        f, op, arg = query_part.split('~')
+        if op == '=':
+            finder.eq(f, arg)
+        elif op == '!=':
+            finder.ne(f, arg)
+        elif op == '<':
+            finder.lt(f, arg)
+        elif op == '<=':
+            finder.lte(f, arg)
+        elif op == '>':
+            finder.gt(f, arg)
+        elif op == '>=':
+            finder.gte(f, arg)
+        else:
+            raise ValueError('Invalid query operator: {}'.format(op))
 
     return finder
 
