@@ -193,7 +193,7 @@ class PatchEntity(_routing.Controller):
             raise self.forbidden("Model '{}' does not support transfer via HTTP".format(model))
 
         # Check permissions
-        if not (entity.odm_auth_check_permission('modify') or entity.odm_auth_check_permission('modify_own')):
+        if not entity.odm_auth_check_permission('modify'):
             raise self.forbidden('Insufficient permissions')
 
         # Which fields to return
@@ -227,7 +227,7 @@ class DeleteEntity(_routing.Controller):
             raise self.forbidden("Model '{}' does not support transfer via HTTP".format(model))
 
         # Check permissions
-        if not (entity.odm_auth_check_permission('delete') or entity.odm_auth_check_permission('delete_own')):
+        if not entity.odm_auth_check_permission('delete'):
             raise self.forbidden('Insufficient permissions')
 
         # Delete entity
