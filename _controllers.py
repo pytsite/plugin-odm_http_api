@@ -1,13 +1,13 @@
 """ PytSite ODM HTTP API
 """
+__author__ = 'Oleksandr Shepetko'
+__email__ = 'a@shepetko.com'
+__license__ = 'MIT'
+
 from typing import Mapping as _Mapping, List as _List
 from json import loads as _json_loads, JSONDecodeError as _JSONDecodeError
 from pytsite import routing as _routing, formatters as _formatters
 from plugins import odm as _odm, odm_auth as _odm_auth
-
-__author__ = 'Alexander Shepetko'
-__email__ = 'a@shepetko.com'
-__license__ = 'MIT'
 
 
 def _fill_entity_fields(entity: _odm_auth.model.OwnedEntity,
@@ -97,9 +97,6 @@ class GetEntities(_routing.Controller):
         r = []
         f = _parse_query(self.args.pop('query'), _odm.find(model)).skip(self.args.pop('skip', 0))
         for entity in f.get(self.args.pop('limit', 100)):
-            if not entity.odm_auth_check_permission('view'):
-                continue
-
             jsonable = entity.as_jsonable(**dict(self.args))
 
             r.append({k: v for k, v in jsonable.items() if k in fields} if fields else jsonable)
@@ -126,10 +123,6 @@ class GetEntity(_routing.Controller):
         # Check for entity's class
         if not isinstance(entity, _odm_auth.model.OwnedEntity):
             raise self.forbidden("Model '{}' does not support transfer via HTTP".format(model))
-
-        # Check for permissions
-        if not entity.odm_auth_check_permission('view'):
-            raise self.forbidden('Insufficient permissions')
 
         # Which fields to return
         fields = self.args.pop('fields_list')
