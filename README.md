@@ -4,6 +4,11 @@
 ## Changelog
 
 
+### 2.3 (2018-09-14)
+
+Support of `odm-4.0`.
+
+
 ### 2.2 (2018-08-09)
 
 Support of `odm_auth-1.9`.

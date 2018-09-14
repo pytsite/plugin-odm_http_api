@@ -31,9 +31,9 @@ def _fill_entity_fields(entity: _odm_auth.model.OwnedEntity,
 
         # Resolve references
         if isinstance(field, _odm.field.Ref):
-            field_value = _odm.resolve_ref(field_value, field.model)
+            field_value = _odm.resolve_ref(field_value)
         elif isinstance(field, _odm.field.RefsList):
-            field_value = _odm.resolve_refs(field_value, field.model)
+            field_value = _odm.resolve_refs(field_value)
 
         # Set field's value
         try:
