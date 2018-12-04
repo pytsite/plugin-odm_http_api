@@ -1,29 +1,31 @@
-define(['http-api'], function (httpApi) {
-    function getEntities(model, args) {
-        return httpApi.get('odm/entities/' + model, args);
-    }
+import httpApi from '@pytsite/http-api';
 
-    function getEntity(model, uid, args) {
-        return httpApi.get('odm/entity/' + model + '/' + uid, args);
-    }
+function getEntities(model, args) {
+    return httpApi.get(`odm/entities/${model}`, args);
+}
 
-    function postEntity(model, data) {
-        return httpApi.post('odm/entity/' + model, data);
-    }
+function getEntity(ref, args) {
+    return httpApi.get(`odm/entity/${ref}`, args);
+}
 
-    function patchEntity(model, uid, data) {
-        return httpApi.patch('odm/entity/' + model + '/' + uid, data);
-    }
+function postEntity(model, data) {
+    return httpApi.post(`odm/entity/${model}`, data);
+}
 
-    function deleteEntity(model, uid) {
-        return httpApi.del('odm/entity/' + model + '/' + uid);
-    }
+function patchEntity(ref, data) {
+    return httpApi.patch(`odm/entity/${ref}`, data);
+}
 
-    return {
-        getEntities: getEntities,
-        getEntity: getEntity,
-        postEntity: postEntity,
-        patchEntity: patchEntity,
-        deleteEntity: deleteEntity
-    }
-});
+function deleteEntity(ref, args) {
+    return httpApi.del(`odm/entity/${ref}`, args);
+}
+
+const api = {
+    getEntities: getEntities,
+    getEntity: getEntity,
+    postEntity: postEntity,
+    patchEntity: patchEntity,
+    deleteEntity: deleteEntity
+};
+
+export default api;

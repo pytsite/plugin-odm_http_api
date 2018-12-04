@@ -1,6 +1,6 @@
 {
   "name": "odm_http_api",
-  "version": "2.3",
+  "version": "3.0",
   "description": {
     "en": "ODM HTTP API",
     "ru": "ODM HTTP API",
@@ -13,12 +13,11 @@
     "url": "https://shepetko.com"
   },
   "requires": {
-    "pytsite": ">=7.13",
-    "plugins": [
-      "assetman",
-      "http_api",
-      "odm>=4.0",
-      "odm_auth>=1.9"
-    ]
+    "pytsite": ">=8",
+    "plugins": {
+      "assetman": "5.x",
+      "http_api": "3.x",
+      "odm": "5.x"
+    }
   }
 }

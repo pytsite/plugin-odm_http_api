@@ -4,6 +4,11 @@
 ## Changelog
 
 
+### 3.0 (2018-12-04)
+
+Almost totally redesigned.
+
+
 ### 2.3 (2018-09-14)
 
 Support of `odm-4.0`.

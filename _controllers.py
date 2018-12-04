@@ -4,22 +4,24 @@ __author__ = 'Oleksandr Shepetko'
 __email__ = 'a@shepetko.com'
 __license__ = 'MIT'
 
-from typing import Mapping as _Mapping, List as _List
+from typing import List as _List
 from json import loads as _json_loads, JSONDecodeError as _JSONDecodeError
 from pytsite import routing as _routing, formatters as _formatters
-from plugins import odm as _odm, odm_auth as _odm_auth
+from plugins import odm as _odm
 
 
-def _fill_entity_fields(entity: _odm_auth.model.OwnedEntity,
-                        fields_data: _Mapping) -> _odm_auth.model.OwnedEntity:
+def _fill_entity_fields(entity: _odm.Entity, fields_data: dict):
+    """Helper function
+    """
     for field_name, field_value in fields_data.items():
         # Fields to skip
         if field_name.startswith('_') or not entity.has_field(field_name):
-            continue
+            raise RuntimeError("Invalid field: '{}'".format(field_name))
 
+        # Get field
         field = entity.get_field(field_name)
 
-        # Convert JSON string to object
+        # Parse JSON values
         if isinstance(field, (_odm.field.List, _odm.field.Dict)):
             if isinstance(field_value, str):
                 try:
@@ -27,45 +29,13 @@ def _fill_entity_fields(entity: _odm_auth.model.OwnedEntity,
                 except _JSONDecodeError as e:
                     raise RuntimeError("JSON decoding error at field '{}': {}".format(field_name, e))
             else:
-                raise RuntimeError("Field '{}' is not properly JSON-encoded".format(field_name))
-
-        # Resolve references
-        if isinstance(field, _odm.field.Ref):
-            field_value = _odm.resolve_ref(field_value)
-        elif isinstance(field, _odm.field.RefsList):
-            field_value = _odm.resolve_refs(field_value)
+                raise RuntimeError("JSON decoding error at field '{}'".format(field_name))
 
         # Set field's value
         try:
             entity.f_set(field_name, field_value)
         except (TypeError, ValueError) as e:
-            raise RuntimeError("Invalid format of field '{}': {}".format(field_name, e))
-
-    return entity
-
-
-def _parse_query(query: str, finder: _odm.Finder) -> _odm.Finder:
-    if not query:
-        return finder
-
-    for query_part in query.split(';'):
-        f, op, arg = query_part.split('~')
-        if op == '=':
-            finder.eq(f, arg)
-        elif op == '!=':
-            finder.ne(f, arg)
-        elif op == '<':
-            finder.lt(f, arg)
-        elif op == '<=':
-            finder.lte(f, arg)
-        elif op == '>':
-            finder.gt(f, arg)
-        elif op == '>=':
-            finder.gte(f, arg)
-        else:
-            raise ValueError('Invalid query operator: {}'.format(op))
-
-    return finder
+            raise RuntimeError("Invalid format of the field '{}': {}".format(field_name, e))
 
 
 class GetEntities(_routing.Controller):
@@ -76,30 +46,30 @@ class GetEntities(_routing.Controller):
         super().__init__()
 
         self.args.add_formatter('skip', _formatters.PositiveInt())
-        self.args.add_formatter('limit', _formatters.PositiveInt(maximum=100))
+        self.args.add_formatter('limit', _formatters.PositiveInt(default=10, maximum=100))
 
     def exec(self) -> _List[dict]:
         model = self.args.pop('model')
+        mock = _odm.dispense(model)
 
         # Check entity's class
         try:
-            mock = _odm.dispense(model)
-            if not isinstance(mock, _odm_auth.model.OwnedEntity):
+            if not hasattr(mock, 'http_api_get'):
                 raise self.forbidden("Model '{}' does not support transfer via HTTP".format(model))
         except _odm.error.ModelNotRegistered as e:
             raise self.not_found(e)
 
-        # Which fields to return
-        fields = self.args.pop('fields_list')
-        if isinstance(fields, str):
-            fields = fields.split(',')
+        # Create finder
+        f = _odm.find(model)
 
+        # Alter finder
+        if hasattr(mock, 'http_api_finder'):
+            mock.http_api_finder(f, **dict(self.args))
+
+        # Build response
         r = []
-        f = _parse_query(self.args.pop('query'), _odm.find(model)).skip(self.args.pop('skip', 0))
-        for entity in f.get(self.args.pop('limit', 100)):
-            jsonable = entity.as_jsonable(**dict(self.args))
-
-            r.append({k: v for k, v in jsonable.items() if k in fields} if fields else jsonable)
+        for entity in f.skip(self.args.pop('skip')).get(self.args.pop('limit')):
+            r.append(entity.http_api_get(**dict(self.args)))
 
         return r
 
@@ -108,30 +78,25 @@ class GetEntity(_routing.Controller):
     """Get an entity
     """
 
-    def exec(self) -> dict:
-        model = self.arg('model')
+    def __init__(self):
+        super().__init__()
 
-        # Search for entity
+        self.args.add_formatter('ref', _formatters.Str())
+
+    def exec(self) -> dict:
+        # Load entity
         try:
-            entity = _odm.find(model).eq('_id', self.arg('uid')).first()  # type: _odm_auth.model.OwnedEntity
+            entity = _odm.get_by_ref(self.args.pop('ref'))
         except _odm.error.ModelNotRegistered as e:
             raise self.not_found(e)
-
         if not entity:
             raise self.not_found('Entity not found')
 
         # Check for entity's class
-        if not isinstance(entity, _odm_auth.model.OwnedEntity):
-            raise self.forbidden("Model '{}' does not support transfer via HTTP".format(model))
+        if not hasattr(entity, 'http_api_get'):
+            raise self.forbidden("Model '{}' does not support transfer via HTTP".format(entity.model))
 
-        # Which fields to return
-        fields = self.args.pop('fields_list')
-        if isinstance(fields, str):
-            fields = fields.split(',')
-
-        jsonable = entity.as_jsonable(**dict(self.args))
-
-        return {k: v for k, v in jsonable.items() if k in fields} if fields else jsonable
+        return entity.http_api_get(**dict(self.args))
 
 
 class PostEntity(_routing.Controller):
@@ -139,33 +104,27 @@ class PostEntity(_routing.Controller):
     """
 
     def exec(self) -> dict:
-        model = self.args.pop('model')
-
-        # Check permissions
-        if not _odm_auth.check_permission('create', model):
-            raise self.forbidden('Insufficient permissions')
-
         # Dispense new entity
         try:
-            entity = _odm.dispense(model)  # type: _odm_auth.model.OwnedEntity
+            entity = _odm.dispense(self.args.pop('model'))
         except _odm.error.ModelNotRegistered as e:
             raise self.not_found(e)
 
-        # Only authorizable entities can be accessed via HTTP API
-        if not isinstance(entity, _odm_auth.model.OwnedEntity):
-            raise self.forbidden("Model '{}' does not support transfer via HTTP".format(model))
+        # Check entity's class
+        if not hasattr(entity, 'http_api_get'):
+            raise self.forbidden("Model '{}' does not support transfer via HTTP".format(entity.model))
 
-        # Which fields to return
-        fields = self.args.pop('fields_list')
-        if isinstance(fields, str):
-            fields = fields.split(',')
+        # Fill entity's fields with values
+        _fill_entity_fields(entity, self.args)
 
-        # Fill entity's fields with values and save
-        _fill_entity_fields(entity, self.args).save()
+        # Call entity's hook
+        if hasattr(entity, 'http_api_post'):
+            entity.http_api_post(**dict(self.args))
 
-        jsonable = entity.as_jsonable()
+        # Save entity
+        entity.save()
 
-        return {k: v for k, v in jsonable.items() if k in fields} if fields else jsonable
+        return entity.http_api_get(**dict(self.args))
 
 
 class PatchEntity(_routing.Controller):
@@ -173,33 +132,29 @@ class PatchEntity(_routing.Controller):
     """
 
     def exec(self) -> dict:
-        model = self.args.pop('model')
-
-        # Dispense existing entity
+        # Load entity
         try:
-            entity = _odm.dispense(model, self.args.pop('uid'))  # type: _odm_auth.model.OwnedEntity
+            entity = _odm.get_by_ref(self.args.pop('ref'))
         except _odm.error.ModelNotRegistered as e:
             raise self.not_found(e)
+        if not entity:
+            raise self.not_found('Entity not found')
 
-        # Only authorizable entities can be accessed via HTTP API
-        if not isinstance(entity, _odm_auth.model.OwnedEntity):
-            raise self.forbidden("Model '{}' does not support transfer via HTTP".format(model))
-
-        # Check permissions
-        if not entity.odm_auth_check_permission('modify'):
-            raise self.forbidden('Insufficient permissions')
-
-        # Which fields to return
-        fields = self.args.pop('fields_list')
-        if isinstance(fields, str):
-            fields = fields.split(',')
+        # Check entity's class
+        if not hasattr(entity, 'http_api_get'):
+            raise self.forbidden("Model '{}' does not support transfer via HTTP".format(entity.model))
 
         # Fill fields with values and save
-        _fill_entity_fields(entity, self.args).save()
+        _fill_entity_fields(entity, self.args)
 
-        jsonable = entity.as_jsonable()
+        # Call entity's hook
+        if hasattr(entity, 'http_api_patch'):
+            entity.http_api_patch(**dict(self.args))
 
-        return {k: v for k, v in jsonable.items() if k in fields} if fields else jsonable
+        # Save entity
+        entity.save()
+
+        return entity.http_api_get(**dict(self.args))
 
 
 class DeleteEntity(_routing.Controller):
@@ -207,27 +162,23 @@ class DeleteEntity(_routing.Controller):
     """
 
     def exec(self) -> dict:
-        model = self.arg('model')
-
+        # Load entity
         try:
-            # Dispense existing entity
-            entity = _odm.dispense(model, self.arg('uid'))
+            entity = _odm.get_by_ref(self.args.pop('ref'))
         except _odm.error.ModelNotRegistered as e:
             raise self.not_found(e)
+        if not entity:
+            raise self.not_found('Entity not found')
 
-        # Only authorizable entities can be accessed via HTTP API
-        if not isinstance(entity, _odm_auth.model.OwnedEntity):
-            raise self.forbidden("Model '{}' does not support transfer via HTTP".format(model))
+        # Check entity's class
+        if not hasattr(entity, 'http_api_get'):
+            raise self.forbidden("Model '{}' does not support transfer via HTTP".format(entity.model))
 
-        # Check permissions
-        if not entity.odm_auth_check_permission('delete'):
-            raise self.forbidden('Insufficient permissions')
+        # Call entity's hook
+        if hasattr(entity, 'http_api_delete'):
+            entity.http_api_delete(**dict(self.args))
 
         # Delete entity
-        try:
-            entity.delete()
-        except _odm.error.EntityDeleted:
-            # Entity was deleted by another instance
-            pass
+        entity.delete()
 
         return {'status': True}
