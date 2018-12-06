@@ -4,13 +4,19 @@ __author__ = 'Oleksandr Shepetko'
 __email__ = 'a@shepetko.com'
 __license__ = 'MIT'
 
-from typing import List as _List
+from typing import Type as _Type, List as _List, Union as _Union
+from inspect import isclass as _isclass
 from json import loads as _json_loads, JSONDecodeError as _JSONDecodeError
-from pytsite import routing as _routing, formatters as _formatters
+from pytsite import http as _http, routing as _routing, formatters as _formatters, errors as _errors
 from plugins import odm as _odm
+from . import _model
+
+_EntityCls = _Union[_Type[_odm.Entity], _Type[_model.HTTPAPIEntityMixin]]
+_Entity = _Union[_odm.Entity, _model.HTTPAPIEntityMixin]
+_EntityOrCls = _Union[_EntityCls, _Entity]
 
 
-def _fill_entity_fields(entity: _odm.Entity, fields_data: dict):
+def _fill_entity_fields(entity: _Entity, fields_data: dict) -> _Entity:
     """Helper function
     """
     for field_name, field_value in fields_data.items():
@@ -37,6 +43,32 @@ def _fill_entity_fields(entity: _odm.Entity, fields_data: dict):
         except (TypeError, ValueError) as e:
             raise RuntimeError("Invalid format of the field '{}': {}".format(field_name, e))
 
+    return entity
+
+
+def _check_api_enabled(o: _EntityOrCls) -> _EntityOrCls:
+    if (_isclass(o) and not issubclass(o, _model.HTTPAPIEntityMixin)) or not o.http_api_enabled():
+        raise _errors.ForbidOperation('Usage of HTTP API is not allowed for this model')
+
+    return o
+
+
+def _dispense_entity(ref: str = None, model: str = None) -> _Entity:
+    # Load entity
+    try:
+        entity = _odm.get_by_ref(ref) if ref else _odm.dispense(model)
+
+        if not entity:
+            raise _http.error.NotFound('Entity not found')
+
+        if not isinstance(entity, _model.HTTPAPIEntityMixin):
+            raise _http.error.Forbidden("Model '{}' does not support transfer via HTTP".format(entity.model))
+
+        return entity
+
+    except _odm.error.ModelNotRegistered as e:
+        raise _http.error.NotFound(e)
+
 
 class GetEntities(_routing.Controller):
     """Get entities
@@ -49,29 +81,12 @@ class GetEntities(_routing.Controller):
         self.args.add_formatter('limit', _formatters.PositiveInt(default=10, maximum=100))
 
     def exec(self) -> _List[dict]:
-        model = self.args.pop('model')
-        mock = _odm.dispense(model)
-
-        # Check entity's class
         try:
-            if not hasattr(mock, 'http_api_get'):
-                raise self.forbidden("Model '{}' does not support transfer via HTTP".format(model))
+            model = self.args.pop('model')
+            cls = _check_api_enabled(_odm.get_model_class(model))
+            return cls.http_api_get_entities(_odm.find(model), self.args)
         except _odm.error.ModelNotRegistered as e:
             raise self.not_found(e)
-
-        # Create finder
-        f = _odm.find(model)
-
-        # Alter finder
-        if hasattr(mock, 'http_api_finder'):
-            mock.http_api_finder(f, **dict(self.args))
-
-        # Build response
-        r = []
-        for entity in f.skip(self.args.pop('skip')).get(self.args.pop('limit')):
-            r.append(entity.http_api_get(**dict(self.args)))
-
-        return r
 
 
 class GetEntity(_routing.Controller):
@@ -79,106 +94,60 @@ class GetEntity(_routing.Controller):
     """
 
     def __init__(self):
+        """Init
+        """
         super().__init__()
 
         self.args.add_formatter('ref', _formatters.Str())
 
     def exec(self) -> dict:
-        # Load entity
-        try:
-            entity = _odm.get_by_ref(self.args.pop('ref'))
-        except _odm.error.ModelNotRegistered as e:
-            raise self.not_found(e)
-        if not entity:
-            raise self.not_found('Entity not found')
-
-        # Check for entity's class
-        if not hasattr(entity, 'http_api_get'):
-            raise self.forbidden("Model '{}' does not support transfer via HTTP".format(entity.model))
-
-        return entity.http_api_get(**dict(self.args))
+        return _check_api_enabled(_dispense_entity(self.args.pop('ref'))).http_api_get_entity(self.args)
 
 
 class PostEntity(_routing.Controller):
     """Create a new entity
     """
 
+    def __init__(self):
+        """Init
+        """
+        super().__init__()
+
+        self.args.add_formatter('ref', _formatters.Str())
+
     def exec(self) -> dict:
-        # Dispense new entity
-        try:
-            entity = _odm.dispense(self.args.pop('model'))
-        except _odm.error.ModelNotRegistered as e:
-            raise self.not_found(e)
+        entity = _fill_entity_fields(_check_api_enabled(_dispense_entity(model=self.args.pop('model'))), self.args)
 
-        # Check entity's class
-        if not hasattr(entity, 'http_api_get'):
-            raise self.forbidden("Model '{}' does not support transfer via HTTP".format(entity.model))
-
-        # Fill entity's fields with values
-        _fill_entity_fields(entity, self.args)
-
-        # Call entity's hook
-        if hasattr(entity, 'http_api_post'):
-            entity.http_api_post(**dict(self.args))
-
-        # Save entity
-        entity.save()
-
-        return entity.http_api_get(**dict(self.args))
+        return entity.http_api_post_entity(self.args)
 
 
 class PatchEntity(_routing.Controller):
     """Update an entity
     """
 
+    def __init__(self):
+        """Init
+        """
+        super().__init__()
+
+        self.args.add_formatter('ref', _formatters.Str())
+
     def exec(self) -> dict:
-        # Load entity
-        try:
-            entity = _odm.get_by_ref(self.args.pop('ref'))
-        except _odm.error.ModelNotRegistered as e:
-            raise self.not_found(e)
-        if not entity:
-            raise self.not_found('Entity not found')
+        entity = _fill_entity_fields(_check_api_enabled(_dispense_entity(model=self.args.pop('model'))), self.args)
 
-        # Check entity's class
-        if not hasattr(entity, 'http_api_get'):
-            raise self.forbidden("Model '{}' does not support transfer via HTTP".format(entity.model))
-
-        # Fill fields with values and save
-        _fill_entity_fields(entity, self.args)
-
-        # Call entity's hook
-        if hasattr(entity, 'http_api_patch'):
-            entity.http_api_patch(**dict(self.args))
-
-        # Save entity
-        entity.save()
-
-        return entity.http_api_get(**dict(self.args))
+        return entity.http_api_patch_entity(self.args)
 
 
 class DeleteEntity(_routing.Controller):
     """Delete an entity
     """
 
+    def __init__(self):
+        """Init
+        """
+        super().__init__()
+
+        self.args.add_formatter('ref', _formatters.Str())
+
     def exec(self) -> dict:
-        # Load entity
-        try:
-            entity = _odm.get_by_ref(self.args.pop('ref'))
-        except _odm.error.ModelNotRegistered as e:
-            raise self.not_found(e)
-        if not entity:
-            raise self.not_found('Entity not found')
-
-        # Check entity's class
-        if not hasattr(entity, 'http_api_get'):
-            raise self.forbidden("Model '{}' does not support transfer via HTTP".format(entity.model))
-
-        # Call entity's hook
-        if hasattr(entity, 'http_api_delete'):
-            entity.http_api_delete(**dict(self.args))
-
-        # Delete entity
-        entity.delete()
-
-        return {'status': True}
+        return _check_api_enabled(_dispense_entity(self.args.pop('ref'))).http_api_delete_entity(self.args)

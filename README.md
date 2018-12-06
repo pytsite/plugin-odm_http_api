@@ -4,6 +4,11 @@
 ## Changelog
 
 
+### 4.0 (2018-12-06)
+
+Totally redesigned. Again.
+
+
 ### 3.0 (2018-12-04)
 
 Almost totally redesigned.
