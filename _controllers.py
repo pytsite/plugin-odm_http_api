@@ -79,12 +79,19 @@ class GetEntities(_routing.Controller):
 
         self.args.add_formatter('skip', _formatters.PositiveInt())
         self.args.add_formatter('limit', _formatters.PositiveInt(default=10, maximum=100))
+        self.args.add_formatter('refs', _formatters.JSONArrayToList())
 
     def exec(self) -> _List[dict]:
         try:
             model = self.args.pop('model')
+            refs = self.args.pop('refs')
             cls = _check_api_enabled(_odm.get_model_class(model))
-            return cls.http_api_get_entities(_odm.find(model), self.args)
+            finder = _odm.find(model)
+
+            if refs:
+                finder.inc('_ref', refs)
+
+            return cls.http_api_get_entities(finder, self.args)
         except _odm.error.ModelNotRegistered as e:
             raise self.not_found(e)
 

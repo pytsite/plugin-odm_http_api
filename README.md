@@ -4,6 +4,11 @@
 ## Changelog
 
 
+### 4.1 (2018-12-06)
+
+New `refs` arg added to `GetEntities` controller.
+
+
 ### 4.0 (2018-12-06)
 
 Totally redesigned. Again.
