@@ -11,20 +11,17 @@ from plugins import odm as _odm
 
 class HTTPAPIEntityMixin:
     @classmethod
-    def http_api_enabled(cls) -> bool:
+    def odm_http_api_enabled(cls) -> bool:
         return False
 
     @classmethod
-    def http_api_get_entities(cls, finder: _odm.Finder, args: _routing.ControllerArgs) -> _List[dict]:
+    def odm_http_api_get_entities(cls, finder: _odm.Finder, args: _routing.ControllerArgs):
         """Called by 'odm_http_api@get_entities' route
         """
-        r = []
-        for entity in finder.skip(args.pop('skip')).get(args.pop('limit')):  # type: HTTPAPIEntityMixin
-            r.append(entity.http_api_get_entity(args))
+        pass
 
-        return r
 
-    def http_api_get_entity(self, args):
+    def odm_http_api_get_entity(self, args):
         """Called by 'odm_http_api@get_entity' route
 
         :type self: _odm.Entity | HTTPAPIEntityMixin
@@ -32,7 +29,7 @@ class HTTPAPIEntityMixin:
         """
         return self.as_jsonable(**dict(args))
 
-    def http_api_post_entity(self, args):
+    def odm_http_api_post_entity(self, args):
         """Called by 'odm_http_api@post_entity' route
 
         :type self: _odm.Entity | HTTPAPIEntityMixin
@@ -40,15 +37,15 @@ class HTTPAPIEntityMixin:
         """
         return self.save().as_jsonable(**dict(args))
 
-    def http_api_patch_entity(self, args):
+    def odm_http_api_patch_entity(self, args):
         """Called by 'odm_http_api@patch_entity' route
 
         :type self: _odm.Entity | HTTPAPIEntityMixin
         :type args: _routing.ControllerArgs
         """
-        self.save().as_jsonable(**dict(args))
+        return self.save().as_jsonable(**dict(args))
 
-    def http_api_delete_entity(self, args):
+    def odm_http_api_delete_entity(self, args):
         """Called by 'odm_http_api@delete_entity' route
 
         :type self: _odm.Entity | HTTPAPIEntityMixin

@@ -4,6 +4,15 @@
 ## Changelog
 
 
+### 5.0 (2018-12-11)
+
+- Support of `pytsite-8.4`.
+- `GetEntities` controller fully redesigned.
+- All `HTTPAPIEntityMixin` method's names git `odm_` prefix.
+- Asynchronous JS API functions make `async`.
+- New JS API function: `getAllEntities()`.
+
+
 ### 4.1 (2018-12-06)
 
 New `refs` arg added to `GetEntities` controller.
