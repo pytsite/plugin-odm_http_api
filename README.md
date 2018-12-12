@@ -4,6 +4,11 @@
 ## Changelog
 
 
+### 5.0.1 (2018-12-12)
+
+Pagination URLs encoding error fixed.
+
+
 ### 5.0 (2018-12-11)
 
 - Support of `pytsite-8.4`.

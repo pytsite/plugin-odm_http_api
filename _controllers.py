@@ -8,13 +8,17 @@ from typing import Type as _Type, Union as _Union
 from inspect import isclass as _isclass
 from copy import deepcopy as _deepcopy
 from json import loads as _json_loads, JSONDecodeError as _JSONDecodeError
-from pytsite import http as _http, routing as _routing, formatters as _formatters, errors as _errors
+from pytsite import http as _http, routing as _routing, formatters as _formatters, errors as _errors, util as _util
 from plugins import odm as _odm, http_api as _http_api
 from . import _model
 
 _EntityCls = _Union[_Type[_odm.Entity], _Type[_model.HTTPAPIEntityMixin]]
 _Entity = _Union[_odm.Entity, _model.HTTPAPIEntityMixin]
 _EntityOrCls = _Union[_EntityCls, _Entity]
+
+
+def _urlquote(s) -> str:
+    return _util.url_quote(s, safe='/:?&=')
 
 
 def _fill_entity_fields(entity: _Entity, fields_data: dict) -> _Entity:
@@ -107,25 +111,25 @@ class GetEntities(_routing.Controller):
 
             # Link to first page
             link_args['skip'] = 0
-            links.append('<{}>; rel="first"'.format(_http_api.url(rule_name, link_args)))
+            links.append('<{}>; rel="first"'.format(_urlquote(_http_api.url(rule_name, link_args))))
 
             # Link to last page
             link_args['skip'] = total - limit
             if link_args['skip'] < 0:
                 link_args['skip'] = 0
-            links.append('<{}>; rel="last"'.format(_http_api.url(rule_name, link_args)))
+            links.append('<{}>; rel="last"'.format(_urlquote(_http_api.url(rule_name, link_args))))
 
             # Link to previous page
             prev_skip = skip - limit
             if prev_skip >= 0:
                 link_args['skip'] = prev_skip
-                links.append('<{}>; rel="prev"'.format(_http_api.url(rule_name, link_args)))
+                links.append('<{}>; rel="prev"'.format(_urlquote(_http_api.url(rule_name, link_args))))
 
             # Link to next page
             next_skip = skip + limit
             if next_skip < total:
                 link_args['skip'] = next_skip
-                links.append('<{}>; rel="next"'.format(_http_api.url(rule_name, link_args)))
+                links.append('<{}>; rel="next"'.format(_urlquote(_http_api.url(rule_name, link_args))))
 
             r = []
             for entity in finder.skip(skip).get(limit):
