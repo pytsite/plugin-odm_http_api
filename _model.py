@@ -15,11 +15,10 @@ class HTTPAPIEntityMixin:
         return False
 
     @classmethod
-    def odm_http_api_get_entities(cls, finder: _odm.Finder, args: _routing.ControllerArgs):
+    def odm_http_api_get_entities(cls, finder: _odm.SingleModelFinder, args: _routing.ControllerArgs):
         """Called by 'odm_http_api@get_entities' route
         """
         pass
-
 
     def odm_http_api_get_entity(self, args):
         """Called by 'odm_http_api@get_entity' route

@@ -1,6 +1,6 @@
 {
   "name": "odm_http_api",
-  "version": "5.0.1",
+  "version": "5.1",
   "description": {
     "en": "ODM HTTP API",
     "ru": "ODM HTTP API",
@@ -17,7 +17,7 @@
     "plugins": {
       "assetman": "5.x",
       "http_api": "3.x",
-      "odm": "5.x"
+      "odm": ">=5.7<6"
     }
   }
 }

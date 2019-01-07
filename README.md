@@ -4,6 +4,11 @@
 ## Changelog
 
 
+### 5.1 (2019-01-07)
+
+Support of `odm-5.7`.
+
+
 ### 5.0.1 (2018-12-12)
 
 Pagination URLs encoding error fixed.
