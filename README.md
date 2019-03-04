@@ -4,6 +4,11 @@
 ## Changelog
 
 
+### 5.2 (2019-03-04)
+
+Support of `odm-6.0`.
+
+
 ### 5.1 (2019-01-07)
 
 Support of `odm-5.7`.

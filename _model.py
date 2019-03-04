@@ -4,7 +4,6 @@ __author__ = 'Oleksandr Shepetko'
 __email__ = 'a@shepetko.com'
 __license__ = 'MIT'
 
-from typing import List as _List
 from pytsite import routing as _routing
 from plugins import odm as _odm
 
